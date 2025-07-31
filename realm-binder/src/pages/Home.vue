@@ -3,7 +3,7 @@
     <div class="home-container">
       <div class="home-card">
         <div class="home-header">
-          <div class="logo">RB BETA</div>
+          <div class="logo">Realm Binder</div>
           <h1 class="home-title">RealmBinder</h1>
           <p class="home-subtitle">
             {{ user ? 'Hoş geldiniz!' : 'DnD dünyanızı yönetmeye başlayın' }}
@@ -32,11 +32,11 @@
             </p>
             
             <div class="button-group">
-              <button class="home-button primary" @click="createGame">
-                Yeni Oyun Oluştur
+              <button class="home-button primary" @click="viewMyGames">
+                Oyunlarım
               </button>
-              <button class="home-button secondary" @click="joinGame">
-                Oyuna Katıl
+              <button class="home-button secondary" @click="createGame">
+                Yeni Oyun Oluştur
               </button>
             </div>
             
@@ -70,6 +70,10 @@ const { user, loading, signOut } = useAuth()
 
 const createGame = () => {
   router.push('/create-game')
+}
+
+const viewMyGames = () => {
+  router.push('/my-games')
 }
 
 const joinGame = () => {

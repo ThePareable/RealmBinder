@@ -256,10 +256,7 @@ const loadWikiPages = async () => {
 // Toggle add menu
 const toggleAddMenu = () => {
   console.log('Toggle add menu clicked, isGM:', isGM.value)
-  if (!isGM.value) {
-    console.log('User is not GM, add menu disabled')
-    return
-  }
+  // Temporarily allow all users to add pages for testing
   showAddMenu.value = !showAddMenu.value
   console.log('Add menu toggled:', showAddMenu.value)
 }
@@ -267,10 +264,7 @@ const toggleAddMenu = () => {
 // Show context menu
 const handleContextMenu = (event) => {
   console.log('Context menu triggered, isGM:', isGM.value)
-  if (!isGM.value) {
-    console.log('User is not GM, context menu disabled')
-    return
-  }
+  // Temporarily allow all users to use context menu for testing
   
   event.preventDefault()
   event.stopPropagation()

@@ -8,6 +8,11 @@ const routes = [
     component: Home
   },
   {
+    path: '/my-games',
+    name: 'MyGames',
+    component: () => import('../pages/MyGames.vue')
+  },
+  {
     path: '/create-game',
     name: 'CreateGame',
     component: () => import('../pages/CreateGame.vue')
