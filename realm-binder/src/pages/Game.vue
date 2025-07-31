@@ -7,7 +7,7 @@
         <div class="dropdown-container">
           <button class="dropdown-toggle" @click="toggleDropdown">
             <span class="user-avatar">👤</span>
-            <span class="user-name">{{ user?.user_metadata?.display_name || user?.email || 'Kullanıcı' }}</span>
+            <span class="user-name">{{ user?.user_metadata?.display_name }}</span>
             <span class="dropdown-arrow">{{ showDropdown ? '▲' : '▼' }}</span>
           </button>
 

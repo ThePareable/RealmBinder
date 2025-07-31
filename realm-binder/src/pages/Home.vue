@@ -83,7 +83,7 @@
 
           <div v-else class="user-content">
             <p class="home-description">
-              Hoş geldiniz, {{ user.user_metadata?.display_name || user.email }}!
+              Hoş geldiniz, {{ user.user_metadata?.display_name }}!
             </p>
 
             <div class="button-group">
