@@ -3,13 +3,35 @@
     <!-- Header -->
     <header class="game-header">
       <div class="header-left">
-        <h1>{{ game?.name || 'Yükleniyor...' }}</h1>
-        <p v-if="game">{{ game.description }}</p>
-      </div>
-      <div class="header-right">
-        <v-btn @click="signOut" variant="outlined" color="error">
-          Çıkış Yap
-        </v-btn>
+        <!-- Dropdown Menu -->
+        <div class="dropdown-container">
+          <button class="dropdown-toggle" @click="toggleDropdown">
+            <span class="user-avatar">👤</span>
+            <span class="user-name">{{ user?.user_metadata?.display_name || user?.email || 'Kullanıcı' }}</span>
+            <span class="dropdown-arrow">{{ showDropdown ? '▲' : '▼' }}</span>
+          </button>
+          
+          <div v-if="showDropdown" class="dropdown-menu">
+            <div class="dropdown-item" @click="goToHome">
+              <span class="dropdown-icon">🏠</span>
+              Ana Sayfa
+            </div>
+            <div class="dropdown-item" @click="goToMyGames">
+              <span class="dropdown-icon">🎲</span>
+              Oyunlarım
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item logout" @click="handleLogout">
+              <span class="dropdown-icon">🚪</span>
+              Çıkış Yap
+            </div>
+          </div>
+        </div>
+        
+        <div class="game-info">
+          <h1>{{ game?.name || 'Yükleniyor...' }}</h1>
+          <p v-if="game">{{ game.description }}</p>
+        </div>
       </div>
     </header>
 
@@ -192,6 +214,9 @@ const templatesExpanded = ref(false)
 const filterText = ref('')
 const searchText = ref('')
 const inlineInputRef = ref(null)
+
+// Dropdown state
+const showDropdown = ref(false)
 
 // Wiki pages
 const wikiPages = ref([])
@@ -395,10 +420,37 @@ const toggleTemplates = () => {
   templatesExpanded.value = !templatesExpanded.value
 }
 
+// Dropdown functions
+const toggleDropdown = () => {
+  showDropdown.value = !showDropdown.value
+}
+
+const goToHome = () => {
+  showDropdown.value = false
+  router.push('/')
+}
+
+const goToMyGames = () => {
+  showDropdown.value = false
+  router.push('/my-games')
+}
+
+const handleLogout = async () => {
+  showDropdown.value = false
+  await signOut()
+  router.push('/')
+}
+
 // Close menus when clicking outside
 onMounted(() => {
   loadGame()
-  document.addEventListener('click', () => {
+  document.addEventListener('click', (event) => {
+    // Close dropdown if clicking outside
+    const dropdown = document.querySelector('.dropdown-container')
+    if (dropdown && !dropdown.contains(event.target)) {
+      showDropdown.value = false
+    }
+    
     closeAddMenu()
     closeContextMenu()
   })
@@ -423,16 +475,108 @@ onMounted(() => {
   border-bottom: 1px solid #404040;
 }
 
-.header-left h1 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.game-info h1 {
   margin: 0;
   font-size: 1.5rem;
   color: #ffffff;
 }
 
-.header-left p {
+.game-info p {
   margin: 0.5rem 0 0 0;
   color: #b0b0b0;
   font-size: 0.9rem;
+}
+
+/* Dropdown Styles */
+.dropdown-container {
+  position: relative;
+}
+
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.user-avatar {
+  font-size: 1.2rem;
+}
+
+.user-name {
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 180px;
+  z-index: 1000;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background: #404040;
+}
+
+.dropdown-item.logout:hover {
+  background: #d32f2f;
+}
+
+.dropdown-icon {
+  font-size: 1rem;
+  width: 16px;
+  text-align: center;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #404040;
+  margin: 4px 0;
 }
 
 .game-content {
