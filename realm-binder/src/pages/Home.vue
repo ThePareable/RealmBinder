@@ -487,17 +487,59 @@ const handleRegister = async () => {
   transform: none;
 }
 
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.home-button {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.home-button.primary {
+  background: linear-gradient(45deg, #8B4513, #DAA520);
+}
+
+.home-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(218, 165, 32, 0.3);
+}
+
+.home-button.secondary {
+  background: linear-gradient(45deg, #2C3E50, #34495E);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.home-button.secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(52, 73, 94, 0.3);
+  background: linear-gradient(45deg, #34495E, #2C3E50);
+}
+
 .user-actions {
   text-align: center;
 }
 
 .logout-button {
-  background: none;
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #B0BEC5;
-  padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -505,6 +547,7 @@ const handleRegister = async () => {
 .logout-button:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #FFFFFF;
+  transform: translateY(-1px);
 }
 
 
