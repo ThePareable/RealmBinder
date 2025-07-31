@@ -32,16 +32,7 @@ const routes = [
     name: 'JoinGame',
     component: () => import('../pages/JoinGame.vue')
   },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('../components/Auth/Login.vue')
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('../components/Auth/Register.vue')
-  }
+
 ]
 
 const router = createRouter({

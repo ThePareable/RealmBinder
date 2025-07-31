@@ -11,14 +11,9 @@
         <div class="invite-section">
           <h3>Davet Linki</h3>
           <p>Bu linki arkadaşlarınızla paylaşın:</p>
-          
+
           <div class="invite-link-container">
-            <input 
-              :value="inviteLink" 
-              readonly 
-              class="invite-link-input"
-              ref="inviteLinkInput"
-            />
+            <input :value="inviteLink" readonly class="invite-link-input" ref="inviteLinkInput" />
             <button @click="copyInviteLink" class="copy-btn">
               {{ copied ? 'Kopyalandı!' : 'Kopyala' }}
             </button>
@@ -29,14 +24,9 @@
         <div class="invite-section">
           <h3>E-posta ile Davet Et</h3>
           <p>E-posta adresini girerek davet gönderin:</p>
-          
+
           <div class="email-invite-form">
-            <input 
-              v-model="inviteEmail" 
-              type="email" 
-              placeholder="E-posta adresi"
-              class="email-input"
-            />
+            <input v-model="inviteEmail" type="email" placeholder="E-posta adresi" class="email-input" />
             <button @click="sendEmailInvite" :disabled="!inviteEmail || sending" class="send-btn">
               {{ sending ? 'Gönderiliyor...' : 'Davet Gönder' }}
             </button>
@@ -134,12 +124,12 @@ const sendEmailInvite = async () => {
 
   try {
     sending.value = true
-    
+
     // TODO: Implement email sending functionality
     // For now, just show success message
     alert(`${inviteEmail.value} adresine davet gönderildi!`)
     inviteEmail.value = ''
-    
+
   } catch (error) {
     console.error('Davet gönderilirken hata:', error)
     alert('Davet gönderilirken bir hata oluştu.')
@@ -177,7 +167,13 @@ onMounted(() => {
 .invite-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 50%, #2A2A2A 100%);
+  background-image: url('../assets/9jGzye.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   padding: 20px;
+  will-change: auto;
 }
 
 .invite-container {
@@ -191,7 +187,7 @@ onMounted(() => {
 }
 
 .invite-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #FFFFFF;
   margin-bottom: 8px;
@@ -202,7 +198,7 @@ onMounted(() => {
 }
 
 .invite-header p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #B0BEC5;
   margin: 0;
 }
@@ -216,9 +212,11 @@ onMounted(() => {
 .invite-section {
   background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(12px);
-  border: 2px solid rgba(218, 165, 32, 0.3);
-  border-radius: 16px;
-  padding: 24px;
+  border: 5px solid rgba(218, 165, 32, 0.4);
+  border-radius: 2vh;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, box-shadow;
 }
 
 .invite-section h3 {
@@ -391,23 +389,23 @@ onMounted(() => {
   .invite-container {
     padding: 0 16px;
   }
-  
+
   .invite-header h1 {
     font-size: 2rem;
   }
-  
+
   .invite-link-container,
   .email-invite-form {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .invite-actions {
     flex-direction: column;
   }
-  
+
   .action-btn {
     width: 100%;
   }
 }
-</style> 
+</style>

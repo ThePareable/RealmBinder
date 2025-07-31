@@ -10,26 +10,18 @@
       </div>
 
       <div class="games-grid">
-        <div 
-          v-for="game in userGames" 
-          :key="game.id" 
-          class="game-card"
-          @click="joinGame(game)"
-        >
+        <div v-for="game in userGames" :key="game.id" class="game-card" @click="joinGame(game)">
           <div class="game-card-header">
             <h3>{{ game.name }}</h3>
             <div class="game-header-actions">
               <span class="game-role" :class="game.role">{{ game.role === 'gm' ? 'GM' : 'Oyuncu' }}</span>
-              <button 
-                class="game-menu-btn" 
-                @click.stop="toggleGameMenu(game.id)"
-                :class="{ active: activeMenu === game.id }"
-              >
+              <button class="game-menu-btn" @click.stop="toggleGameMenu(game.id)"
+                :class="{ active: activeMenu === game.id }">
                 ⋮
               </button>
             </div>
           </div>
-          
+
           <!-- Game Menu Dropdown -->
           <div v-if="activeMenu === game.id" class="game-menu-dropdown" @click.stop>
             <div class="game-menu-item" @click="joinGame(game)">
@@ -40,24 +32,16 @@
               <span class="menu-icon">📧</span>
               Davet Et
             </div>
-            <div 
-              v-if="game.role === 'gm'" 
-              class="game-menu-item delete" 
-              @click="deleteGame(game)"
-            >
+            <div v-if="game.role === 'gm'" class="game-menu-item delete" @click="deleteGame(game)">
               <span class="menu-icon">🗑️</span>
               Oyunu Sil
             </div>
-            <div 
-              v-else 
-              class="game-menu-item leave" 
-              @click="leaveGame(game)"
-            >
+            <div v-else class="game-menu-item leave" @click="leaveGame(game)">
               <span class="menu-icon">🚪</span>
               Oyundan Çık
             </div>
           </div>
-          
+
           <div class="game-card-content">
             <p class="game-description">{{ game.description || 'Açıklama yok' }}</p>
             <div class="game-stats">
@@ -67,7 +51,7 @@
               </span>
             </div>
           </div>
-          
+
           <div class="game-card-actions">
             <button class="join-btn" @click.stop="joinGame(game)">
               Oyuna Katıl
@@ -123,7 +107,7 @@ const loadUserGames = async () => {
   try {
     loading.value = true
     console.log('Loading games for user:', user.value?.id)
-    
+
     // First, let's check if the user exists and is authenticated
     if (!user.value || !user.value.id) {
       console.error('User not authenticated')
@@ -300,7 +284,7 @@ onMounted(() => {
   console.log('MyGames component mounted')
   console.log('Current user:', user.value)
   // Don't call loadUserGames here - let the watcher handle it
-  
+
   // Close menu when clicking outside
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.game-menu-btn') && !event.target.closest('.game-menu-dropdown')) {
@@ -314,7 +298,13 @@ onMounted(() => {
 .my-games-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 50%, #2A2A2A 100%);
+  background-image: url('../assets/9jGzye.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   padding: 20px;
+  will-change: auto;
 }
 
 .my-games-container {
@@ -328,7 +318,7 @@ onMounted(() => {
 }
 
 .my-games-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #FFFFFF;
   margin-bottom: 8px;
@@ -339,7 +329,7 @@ onMounted(() => {
 }
 
 .my-games-header p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #B0BEC5;
   margin: 0 0 16px 0;
 }
@@ -378,9 +368,9 @@ onMounted(() => {
 .game-card {
   background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(12px);
-  border: 2px solid rgba(218, 165, 32, 0.3);
-  border-radius: 16px;
-  padding: 24px;
+  border: 5px solid rgba(218, 165, 32, 0.4);
+  border-radius: 2vh;
+  padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -621,8 +611,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Empty State */
@@ -673,11 +668,11 @@ onMounted(() => {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .my-games-header h1 {
     font-size: 2rem;
   }
-  
+
   .game-card {
     padding: 20px;
   }
@@ -687,14 +682,14 @@ onMounted(() => {
   .my-games-page {
     padding: 16px;
   }
-  
+
   .my-games-header h1 {
     font-size: 1.8rem;
   }
-  
+
   .game-stats {
     flex-direction: column;
     gap: 8px;
   }
 }
-</style> 
+</style>

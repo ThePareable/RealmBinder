@@ -31,7 +31,7 @@
         <div class="join-form-section">
           <h3>Oyuna Katıl</h3>
           <p>Bu oyuna katılmak için giriş yapın veya kayıt olun:</p>
-          
+
           <div class="join-actions">
             <button @click="joinAsPlayer" class="join-btn primary" :disabled="joining">
               {{ joining ? 'Katılıyor...' : 'Oyuncu Olarak Katıl' }}
@@ -89,7 +89,7 @@ const loadGame = async () => {
   try {
     loading.value = true
     error.value = null
-    
+
     const { data, error: gameError } = await supabase
       .from('games')
       .select('*')
@@ -119,7 +119,7 @@ const joinAsPlayer = async () => {
 
   try {
     joining.value = true
-    
+
     // Check if user is already in the game
     const { data: existingUser, error: checkError } = await supabase
       .from('game_users')
@@ -162,7 +162,7 @@ const joinAsPlayer = async () => {
 
 // Login first
 const loginFirst = () => {
-  router.push('/login')
+  router.push('/')
 }
 
 // Go to home
@@ -200,7 +200,13 @@ onMounted(() => {
 .join-game-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 50%, #2A2A2A 100%);
+  background-image: url('../assets/9jGzye.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   padding: 20px;
+  will-change: auto;
 }
 
 .join-game-container {
@@ -214,7 +220,7 @@ onMounted(() => {
 }
 
 .join-game-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #FFFFFF;
   margin-bottom: 8px;
@@ -225,7 +231,7 @@ onMounted(() => {
 }
 
 .join-game-header p {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #B0BEC5;
   margin: 0;
 }
@@ -240,9 +246,11 @@ onMounted(() => {
 .join-form-section {
   background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(12px);
-  border: 2px solid rgba(218, 165, 32, 0.3);
-  border-radius: 16px;
-  padding: 24px;
+  border: 5px solid rgba(218, 165, 32, 0.4);
+  border-radius: 2vh;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, box-shadow;
 }
 
 .game-info-section h3,
@@ -364,8 +372,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-state {
@@ -412,13 +425,13 @@ onMounted(() => {
   .join-game-container {
     padding: 0 16px;
   }
-  
+
   .join-game-header h1 {
     font-size: 2rem;
   }
-  
+
   .join-actions {
     gap: 16px;
   }
 }
-</style> 
+</style>
