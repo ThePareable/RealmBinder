@@ -64,6 +64,12 @@ const gameDescription = ref('')
 const loading = ref(false)
 
 const handleCreateGame = async () => {
+  if (!user.value || !user.value.id) {
+    alert('Lütfen önce giriş yapın.')
+    router.push('/login')
+    return
+  }
+
   if (!gameName.value.trim()) {
     alert('Lütfen oyun adını girin.')
     return

@@ -23,6 +23,16 @@ const routes = [
     component: () => import('../pages/Game.vue')
   },
   {
+    path: '/game/:id/invite',
+    name: 'GameInvite',
+    component: () => import('../pages/GameInvite.vue')
+  },
+  {
+    path: '/join-game/:id',
+    name: 'JoinGame',
+    component: () => import('../pages/JoinGame.vue')
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../components/Auth/Login.vue')
