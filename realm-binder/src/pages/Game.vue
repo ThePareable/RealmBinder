@@ -61,20 +61,20 @@
 
         <!-- Add Menu -->
         <div v-if="showAddMenu" class="add-menu">
-          <div class="menu-item" @click="createNewPage">
-            📄 Yeni Sayfa
+          <div class="menu-item" @click="startCreateFile">
+            📄 Yeni Dosya
           </div>
-          <div class="menu-item" @click="createNewFolder">
+          <div class="menu-item" @click="startCreateFolder">
             📁 Yeni Klasör
           </div>
         </div>
 
         <!-- Context Menu -->
         <div v-if="showContextMenu" class="context-menu" :style="menuPosition" @click.stop>
-          <div class="menu-item" @click="createNewPage">
-            📄 Yeni Sayfa
+          <div class="menu-item" @click="startCreateFile">
+            📄 Yeni Dosya
           </div>
-          <div class="menu-item" @click="createNewFolder">
+          <div class="menu-item" @click="startCreateFolder">
             📁 Yeni Klasör
           </div>
         </div>
@@ -98,42 +98,41 @@
             'active': selectedPage?.id === item.id,
             'dragging': draggedItem?.id === item.id,
             'drag-over': dragOverItem?.id === item.id,
-            'folder-item': item.type === 'folder',
-            'page-item': item.type === 'page'
+            'folder-item': item.isFolder,
+            'file-item': !item.isFolder
           }" draggable="true" @dragstart="handleDragStart($event, item)" @dragover="handleDragOver($event, item)"
             @dragenter="handleDragEnter($event, item)" @dragleave="handleDragLeave($event)"
-            @drop="handleDrop($event, item)" @click="item.type === 'page' ? selectPage(item) : toggleFolder(item)"
+            @drop="handleDrop($event, item)" @click.stop="handleItemClick(item)"
             @contextmenu="handleContextMenu($event, item)" :style="{ paddingLeft: `${item.level * 20 + 12}px` }">
             <div class="item-content">
               <span class="item-icon">
-                {{ item.type === 'folder' ? '📁' : '📄' }}
+                {{ item.isFolder ? '📁' : '📄' }}
               </span>
               <span class="item-title">{{ item.title }}</span>
-              <span v-if="item.type === 'folder'" class="folder-toggle">
+              <span v-if="item.isFolder" class="folder-toggle">
                 {{ item.expanded ? '▼' : '▶' }}
               </span>
             </div>
 
             <!-- Nested items -->
-            <div v-if="item.type === 'folder' && item.expanded" class="tree-children">
+            <div v-if="item.isFolder && item.expanded" class="tree-children">
               <div v-for="child in item.children" :key="child.id" class="tree-item" :class="{
                 'active': selectedPage?.id === child.id,
                 'dragging': draggedItem?.id === child.id,
                 'drag-over': dragOverItem?.id === child.id,
-                'folder-item': child.type === 'folder',
-                'page-item': child.type === 'page'
+                'folder-item': child.isFolder,
+                'file-item': !child.isFolder
               }" draggable="true" @dragstart="handleDragStart($event, child)" @dragover="handleDragOver($event, child)"
                 @dragenter="handleDragEnter($event, child)" @dragleave="handleDragLeave($event)"
-                @drop="handleDrop($event, child)"
-                @click="child.type === 'page' ? selectPage(child) : toggleFolder(child)"
+                @drop="handleDrop($event, child)" @click.stop="handleItemClick(child)"
                 @contextmenu="handleContextMenu($event, child)"
                 :style="{ paddingLeft: `${(child.level + 1) * 20 + 12}px` }">
                 <div class="item-content">
                   <span class="item-icon">
-                    {{ child.type === 'folder' ? '📁' : '📄' }}
+                    {{ child.isFolder ? '📁' : '📄' }}
                   </span>
                   <span class="item-title">{{ child.title }}</span>
-                  <span v-if="child.type === 'folder'" class="folder-toggle">
+                  <span v-if="child.isFolder" class="folder-toggle">
                     {{ child.expanded ? '▼' : '▶' }}
                   </span>
                 </div>
@@ -144,9 +143,15 @@
 
         <!-- Inline Input for New Item -->
         <div v-if="showInlineInput" class="inline-input">
-          <v-text-field v-model="newItemName" placeholder="İsim girin..." @keydown.enter="saveNewItem"
-            @keydown.esc="cancelNewItem" ref="inlineInputRef" density="compact" hide-details variant="outlined"
-            size="small" autofocus color="primary" @blur="saveNewItem"></v-text-field>
+          <div class="input-container">
+            <input v-model="newItemName" :placeholder="`${newItemType === 'file' ? 'Dosya' : 'Klasör'} adı girin...`"
+              @keydown.enter="saveNewItem" @keydown.esc="cancelNewItem" @blur="saveNewItem" ref="inlineInputRef"
+              class="inline-input-field" autofocus />
+            <div class="input-actions">
+              <button @click="saveNewItem" class="save-btn">✓</button>
+              <button @click="cancelNewItem" class="cancel-btn">✕</button>
+            </div>
+          </div>
         </div>
 
         <!-- Search Input -->
@@ -167,15 +172,15 @@
           </div>
         </div>
 
-        <!-- Wiki Page View -->
+        <!-- Wiki File View -->
         <div v-else class="wiki-page-container">
           <div class="wiki-header">
             <h2>{{ selectedPage.title }}</h2>
             <div class="wiki-actions">
-              <v-btn @click="editPage" variant="outlined" size="small">
+              <v-btn @click="editFile" variant="outlined" size="small">
                 Düzenle
               </v-btn>
-              <v-btn @click="closePage" variant="text" size="small">
+              <v-btn @click.stop="closeFile" variant="text" size="small">
                 ✕
               </v-btn>
             </div>
@@ -183,11 +188,11 @@
 
           <div class="wiki-content">
             <div v-if="!isEditing" class="wiki-display">
-              <p>{{ selectedPage.content || 'Bu sayfa henüz boş.' }}</p>
+              <p>{{ selectedPage.content || 'Bu dosya henüz boş.' }}</p>
             </div>
 
             <div v-else class="wiki-editor">
-              <v-textarea v-model="editingContent" placeholder="Sayfa içeriğini yazın..." rows="10"
+              <v-textarea v-model="editingContent" placeholder="Dosya içeriğini yazın..." rows="10"
                 variant="outlined"></v-textarea>
               <div class="editor-actions">
                 <v-btn @click="savePage" color="primary" size="small">
@@ -328,32 +333,24 @@ const loadGame = async () => {
   }
 }
 
-// Load wiki items (pages and folders)
+// Load wiki items (all items are files, some act as folders)
 const loadWikiItems = async () => {
   try {
-    // Load pages
-    const { data: pages, error: pagesError } = await supabase
+    // Load all files
+    const { data: files, error: filesError } = await supabase
       .from('wiki_pages')
       .select('*')
       .eq('game_id', route.params.id)
       .order('created_at', { ascending: true })
 
-    if (pagesError) throw pagesError
+    if (filesError) throw filesError
 
-    // Load folders
-    const { data: folders, error: foldersError } = await supabase
-      .from('wiki_folders')
-      .select('*')
-      .eq('game_id', route.params.id)
-      .order('created_at', { ascending: true })
-
-    if (foldersError) throw foldersError
-
-    // Combine pages and folders
-    const allItems = [
-      ...(pages || []).map(page => ({ ...page, type: 'page' })),
-      ...(folders || []).map(folder => ({ ...folder, type: 'folder' }))
-    ]
+    // All items are files, but some can contain other files (act as folders)
+    const allItems = (files || []).map(file => ({
+      ...file,
+      type: 'file',
+      isFolder: file.content === 'FOLDER_MARKER' || file.content === '' // Empty content or folder marker
+    }))
 
     wikiItems.value = allItems
   } catch (error) {
@@ -434,125 +431,162 @@ const closeAddMenu = () => {
 // WIKI ITEM CREATION FUNCTIONS
 // ============================================================================
 
-// Create new page
-const createNewPage = () => {
-  console.log('createNewPage called, contextMenuTarget:', contextMenuTarget.value)
+// Start creating a new file
+const startCreateFile = () => {
+  console.log('startCreateFile called')
 
+  // Close menus
   showAddMenu.value = false
   showContextMenu.value = false
-  newItemType.value = 'page'
-  showInlineInput.value = true
-  newItemName.value = '' // Reset the input
 
-  // Set parent_id based on context menu target
-  if (contextMenuTarget.value && contextMenuTarget.value.type === 'folder') {
+  // Set up for file creation
+  newItemType.value = 'file'
+  newItemName.value = ''
+
+  // Determine parent based on context
+  if (contextMenuTarget.value && contextMenuTarget.value.isFolder) {
+    // Right-clicked on a folder - create inside it
     newItemParentId.value = contextMenuTarget.value.id
+    console.log('Creating file inside folder:', contextMenuTarget.value.title)
   } else if (contextMenuTarget.value) {
+    // Right-clicked on a file - create next to it
     newItemParentId.value = contextMenuTarget.value.parent_id
+    console.log('Creating file next to:', contextMenuTarget.value.title)
   } else {
+    // Right-clicked on empty space - create at root
     newItemParentId.value = null
+    console.log('Creating file at root level')
   }
 
-  console.log('Creating new page with parent_id:', newItemParentId.value)
-  console.log('showInlineInput set to:', showInlineInput.value)
+  // Show input
+  showInlineInput.value = true
 
+  // Focus input after DOM update
   nextTick(() => {
-    console.log('nextTick executed, inlineInputRef:', inlineInputRef.value)
     if (inlineInputRef.value) {
       inlineInputRef.value.focus()
-      console.log('Focus set on input')
+      console.log('Input focused for file creation')
     }
   })
 }
 
-// Create new folder
-const createNewFolder = () => {
-  console.log('createNewFolder called, contextMenuTarget:', contextMenuTarget.value)
+// Start creating a new folder (empty file that can contain other files)
+const startCreateFolder = () => {
+  console.log('startCreateFolder called')
 
+  // Close menus
   showAddMenu.value = false
   showContextMenu.value = false
+
+  // Set up for folder creation
   newItemType.value = 'folder'
-  showInlineInput.value = true
-  newItemName.value = '' // Reset the input
+  newItemName.value = ''
 
-  // Set parent_id based on context menu target
-  if (contextMenuTarget.value && contextMenuTarget.value.type === 'folder') {
+  // Determine parent based on context
+  if (contextMenuTarget.value && contextMenuTarget.value.isFolder) {
+    // Right-clicked on a folder - create inside it
     newItemParentId.value = contextMenuTarget.value.id
+    console.log('Creating folder inside folder:', contextMenuTarget.value.title)
   } else if (contextMenuTarget.value) {
+    // Right-clicked on a file - create next to it
     newItemParentId.value = contextMenuTarget.value.parent_id
+    console.log('Creating folder next to:', contextMenuTarget.value.title)
   } else {
+    // Right-clicked on empty space - create at root
     newItemParentId.value = null
+    console.log('Creating folder at root level')
   }
 
-  console.log('Creating new folder with parent_id:', newItemParentId.value)
-  console.log('showInlineInput set to:', showInlineInput.value)
+  // Show input
+  showInlineInput.value = true
 
+  // Focus input after DOM update
   nextTick(() => {
-    console.log('nextTick executed, inlineInputRef:', inlineInputRef.value)
     if (inlineInputRef.value) {
       inlineInputRef.value.focus()
-      console.log('Focus set on input')
+      console.log('Input focused for folder creation')
     }
   })
 }
 
-// Save new item
+// Save the new item
 const saveNewItem = async () => {
-  console.log('saveNewItem called with:', {
-    name: newItemName.value,
+  const itemName = newItemName.value.trim()
+
+  console.log('saveNewItem called:', {
+    name: itemName,
     type: newItemType.value,
     parentId: newItemParentId.value
   })
 
-  if (!newItemName.value || !newItemName.value.trim()) {
+  // Validate input
+  if (!itemName) {
     console.log('Empty name, cancelling...')
     cancelNewItem()
     return
   }
 
   try {
-    if (newItemType.value === 'page') {
-      console.log('Creating page with parent_id:', newItemParentId.value)
+    if (newItemType.value === 'file') {
+      console.log('Creating file:', itemName)
+
       const { data, error } = await supabase
         .from('wiki_pages')
         .insert({
           game_id: route.params.id,
-          title: newItemName.value.trim(),
-          content: '',
+          title: itemName,
+          content: 'New file content...', // Default content for files
           parent_id: newItemParentId.value
         })
         .select()
         .single()
 
-      if (error) throw error
-      console.log('Page created successfully:', data)
-      wikiItems.value.push({ ...data, type: 'page' })
+      if (error) {
+        console.error('File creation error:', error)
+        throw error
+      }
+
+      console.log('File created successfully:', data)
+      wikiItems.value.push({ ...data, type: 'file', isFolder: false })
+
     } else if (newItemType.value === 'folder') {
-      console.log('Creating folder with parent_id:', newItemParentId.value)
+      console.log('Creating folder:', itemName)
+
+      // Create folder as empty file that can contain other files
       const { data, error } = await supabase
-        .from('wiki_folders')
+        .from('wiki_pages')
         .insert({
           game_id: route.params.id,
-          title: newItemName.value.trim(),
+          title: itemName,
+          content: '', // Empty content makes it a folder
           parent_id: newItemParentId.value
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Folder creation error:', error)
+        throw error
+      }
+
       console.log('Folder created successfully:', data)
-      wikiItems.value.push({ ...data, type: 'folder' })
+      wikiItems.value.push({ ...data, type: 'file', isFolder: true })
     }
-  } catch (error) {
-    console.error('Yeni öğe oluşturulurken hata:', error)
-  } finally {
+
+    // Success - close input
     cancelNewItem()
+
+  } catch (error) {
+    console.error('Error creating item:', error)
+    // Keep input open on error so user can retry
   }
 }
 
-// Cancel new item creation
+// Cancel item creation
 const cancelNewItem = () => {
-  console.log('Cancelling new item creation')
+  console.log('Cancelling item creation')
+
+  // Reset all state
   showInlineInput.value = false
   newItemName.value = ''
   newItemType.value = ''
@@ -564,19 +598,35 @@ const cancelNewItem = () => {
 // WIKI PAGE FUNCTIONS
 // ============================================================================
 
-// Select page
-const selectPage = (page) => {
-  selectedPage.value = page
+// Select file
+const selectFile = (file) => {
+  console.log('Selecting file:', file.title)
+
+  // Only select if it's not a folder
+  if (!file.isFolder) {
+    // Check if file is already selected
+    if (selectedPage.value?.id === file.id) {
+      console.log('File already selected:', file.title)
+      return
+    }
+
+    selectedPage.value = file
+    isEditing.value = false // Reset editing state when selecting new file
+    console.log('File selected successfully:', file.title)
+  } else {
+    console.log('Cannot select folder as file:', file.title)
+  }
 }
 
-// Close page
-const closePage = () => {
+// Close file
+const closeFile = () => {
+  console.log('Closing file')
   selectedPage.value = null
   isEditing.value = false
 }
 
-// Edit page
-const editPage = () => {
+// Edit file
+const editFile = () => {
   if (!isGM.value) return
   editingContent.value = selectedPage.value.content || ''
   isEditing.value = true
@@ -613,9 +663,23 @@ const toggleTemplates = () => {
   templatesExpanded.value = !templatesExpanded.value
 }
 
+// Handle item click (file or folder)
+const handleItemClick = (item) => {
+  console.log('Item clicked:', item.title, 'isFolder:', item.isFolder)
+
+  if (item.isFolder) {
+    // If it's a folder, toggle it
+    toggleFolder(item)
+  } else {
+    // If it's a file, select it
+    selectFile(item)
+  }
+}
+
 // Toggle folder expansion
 const toggleFolder = (folder) => {
-  if (folder.type === 'folder') {
+  if (folder.isFolder) {
+    console.log('Toggling folder:', folder.title, 'from', folder.expanded, 'to', !folder.expanded)
     folder.expanded = !folder.expanded
   }
 }
@@ -659,23 +723,15 @@ const handleDrop = async (event, targetItem) => {
   }
 
   try {
-    const newParentId = targetItem.type === 'folder' ? targetItem.id : targetItem.parent_id
+    const newParentId = targetItem.isFolder ? targetItem.id : targetItem.parent_id
 
-    if (draggedItem.value.type === 'page') {
-      const { error } = await supabase
-        .from('wiki_pages')
-        .update({ parent_id: newParentId })
-        .eq('id', draggedItem.value.id)
+    // All items are files, just update parent_id
+    const { error } = await supabase
+      .from('wiki_pages')
+      .update({ parent_id: newParentId })
+      .eq('id', draggedItem.value.id)
 
-      if (error) throw error
-    } else if (draggedItem.value.type === 'folder') {
-      const { error } = await supabase
-        .from('wiki_folders')
-        .update({ parent_id: newParentId })
-        .eq('id', draggedItem.value.id)
-
-      if (error) throw error
-    }
+    if (error) throw error
 
     // Update local state
     const itemIndex = wikiItems.value.findIndex(item => item.id === draggedItem.value.id)
@@ -751,7 +807,13 @@ onMounted(() => {
       closeContextMenu()
     }
 
-    closeAddMenu()
+    // Close add menu if clicking outside
+    const addMenu = document.querySelector('.add-menu')
+    if (addMenu && !addMenu.contains(event.target)) {
+      closeAddMenu()
+    }
+
+    // Don't close file view when clicking outside - let user explicitly close it
   })
 })
 </script>
@@ -1054,7 +1116,7 @@ onMounted(() => {
   color: #DAA520;
 }
 
-.page-item {
+.file-item {
   color: #B0BEC5;
   font-weight: 400;
 }
@@ -1163,6 +1225,57 @@ onMounted(() => {
   border-bottom: 1px solid rgba(218, 165, 32, 0.1);
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid rgba(218, 165, 32, 0.1);
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.inline-input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  padding: 4px 0;
+}
+
+.inline-input-field::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.input-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.save-btn,
+.cancel-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.save-btn:hover {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.cancel-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  color: #F44336;
 }
 
 /* ============================================================================
