@@ -215,9 +215,16 @@ const route = useRoute()
 const router = useRouter()
 const { user, signOut } = useAuth()
 
+// ============================================================================
+// REACTIVE STATE
+// ============================================================================
+
 // Game data
 const game = ref(null)
 const isGM = ref(false)
+
+// Dropdown state
+const showDropdown = ref(false)
 
 // Sidebar state
 const showAddMenu = ref(false)
@@ -233,9 +240,6 @@ const filterText = ref('')
 const searchText = ref('')
 const inlineInputRef = ref(null)
 
-// Dropdown state
-const showDropdown = ref(false)
-
 // Wiki pages and folders
 const wikiItems = ref([]) // Combined pages and folders
 const selectedPage = ref(null)
@@ -246,6 +250,10 @@ const editingContent = ref('')
 const draggedItem = ref(null)
 const dragOverItem = ref(null)
 const isDragging = ref(false)
+
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
 
 // Computed filtered items
 const filteredWikiItems = computed(() => {
@@ -285,6 +293,10 @@ const buildTreeStructure = (items) => {
 const wikiTree = computed(() => {
   return buildTreeStructure(filteredWikiItems.value)
 })
+
+// ============================================================================
+// DATA LOADING FUNCTIONS
+// ============================================================================
 
 // Load game data
 const loadGame = async () => {
@@ -349,13 +361,9 @@ const loadWikiItems = async () => {
   }
 }
 
-// Toggle add menu
-const toggleAddMenu = () => {
-  console.log('Toggle add menu clicked, isGM:', isGM.value)
-  // Temporarily allow all users to add pages for testing
-  showAddMenu.value = !showAddMenu.value
-  console.log('Add menu toggled:', showAddMenu.value)
-}
+// ============================================================================
+// CONTEXT MENU FUNCTIONS
+// ============================================================================
 
 // Show context menu
 const handleContextMenu = (event, targetItem) => {
@@ -405,10 +413,26 @@ const closeContextMenu = () => {
   showContextMenu.value = false
 }
 
+// ============================================================================
+// ADD MENU FUNCTIONS
+// ============================================================================
+
+// Toggle add menu
+const toggleAddMenu = () => {
+  console.log('Toggle add menu clicked, isGM:', isGM.value)
+  // Temporarily allow all users to add pages for testing
+  showAddMenu.value = !showAddMenu.value
+  console.log('Add menu toggled:', showAddMenu.value)
+}
+
 // Close add menu when clicking outside
 const closeAddMenu = () => {
   showAddMenu.value = false
 }
+
+// ============================================================================
+// WIKI ITEM CREATION FUNCTIONS
+// ============================================================================
 
 // Create new page
 const createNewPage = () => {
@@ -536,6 +560,10 @@ const cancelNewItem = () => {
   contextMenuTarget.value = null
 }
 
+// ============================================================================
+// WIKI PAGE FUNCTIONS
+// ============================================================================
+
 // Select page
 const selectPage = (page) => {
   selectedPage.value = page
@@ -576,12 +604,26 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
+// ============================================================================
+// TREE NAVIGATION FUNCTIONS
+// ============================================================================
+
 // Toggle templates
 const toggleTemplates = () => {
   templatesExpanded.value = !templatesExpanded.value
 }
 
-// Drag & Drop functions
+// Toggle folder expansion
+const toggleFolder = (folder) => {
+  if (folder.type === 'folder') {
+    folder.expanded = !folder.expanded
+  }
+}
+
+// ============================================================================
+// DRAG & DROP FUNCTIONS
+// ============================================================================
+
 const handleDragStart = (event, item) => {
   draggedItem.value = item
   isDragging.value = true
@@ -661,25 +703,10 @@ const isDescendant = (potentialChild, potentialParent) => {
   return isDescendant(parent, potentialParent)
 }
 
-// Toggle folder expansion
-const toggleFolder = (folder) => {
-  if (folder.type === 'folder') {
-    folder.expanded = !folder.expanded
-  }
-}
+// ============================================================================
+// DROPDOWN NAVIGATION FUNCTIONS
+// ============================================================================
 
-// Recursive component to render tree items
-const renderTreeItem = (item, level = 0) => {
-  const children = wikiItems.value.filter(child => child.parent_id === item.id)
-
-  return {
-    item,
-    level,
-    children: children.map(child => renderTreeItem(child, level + 1))
-  }
-}
-
-// Dropdown functions
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
 }
@@ -704,6 +731,10 @@ const handleLogout = async () => {
   router.push('/')
 }
 
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
 // Close menus when clicking outside
 onMounted(() => {
   loadGame()
@@ -726,6 +757,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ============================================================================
+   MAIN LAYOUT
+   ============================================================================ */
+
 .game-container {
   height: 100vh;
   display: flex;
@@ -734,6 +769,16 @@ onMounted(() => {
   color: #ffffff;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
+.game-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   HEADER STYLES
+   ============================================================================ */
 
 .game-header {
   background: rgba(45, 45, 45, 0.8);
@@ -760,32 +805,6 @@ onMounted(() => {
   gap: 12px;
 }
 
-.invite-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(45deg, #8B4513, #DAA520);
-  color: #FFFFFF;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(218, 165, 32, 0.2);
-}
-
-.invite-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(218, 165, 32, 0.3);
-  background: linear-gradient(45deg, #A0522D, #FFD700);
-}
-
-.invite-icon {
-  font-size: 1rem;
-}
-
 .game-info h1 {
   margin: 0;
   font-size: 1.2rem;
@@ -802,7 +821,10 @@ onMounted(() => {
   line-height: 1.3;
 }
 
-/* Dropdown Styles */
+/* ============================================================================
+   DROPDOWN STYLES
+   ============================================================================ */
+
 .dropdown-container {
   position: relative;
   z-index: 99999;
@@ -907,11 +929,39 @@ onMounted(() => {
   border-radius: 1px;
 }
 
-.game-content {
-  flex: 1;
+/* ============================================================================
+   BUTTON STYLES
+   ============================================================================ */
+
+.invite-btn {
   display: flex;
-  overflow: hidden;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(45deg, #8B4513, #DAA520);
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(218, 165, 32, 0.2);
 }
+
+.invite-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(218, 165, 32, 0.3);
+  background: linear-gradient(45deg, #A0522D, #FFD700);
+}
+
+.invite-icon {
+  font-size: 1rem;
+}
+
+/* ============================================================================
+   SIDEBAR STYLES
+   ============================================================================ */
 
 .game-sidebar {
   width: 280px;
@@ -953,6 +1003,10 @@ onMounted(() => {
   margin-top: auto;
   background: rgba(255, 255, 255, 0.01);
 }
+
+/* ============================================================================
+   WIKI TREE STYLES
+   ============================================================================ */
 
 .wiki-tree {
   flex: 1;
@@ -1047,14 +1101,15 @@ onMounted(() => {
   border-left: 1px solid rgba(218, 165, 32, 0.15);
 }
 
-.page-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #B0BEC5;
-  font-weight: 400;
-  font-size: 0.8rem;
+.templates {
+  font-weight: 600;
+  color: #DAA520;
+  font-size: 0.9rem;
 }
+
+/* ============================================================================
+   MENU STYLES
+   ============================================================================ */
 
 .add-menu {
   position: absolute;
@@ -1110,6 +1165,10 @@ onMounted(() => {
   border-top: 1px solid rgba(218, 165, 32, 0.1);
 }
 
+/* ============================================================================
+   MAIN CONTENT STYLES
+   ============================================================================ */
+
 .game-main {
   flex: 1;
   background: rgba(26, 26, 26, 0.95);
@@ -1133,6 +1192,10 @@ onMounted(() => {
   margin: 1rem 0 0.5rem 0;
   color: #ffffff;
 }
+
+/* ============================================================================
+   WIKI PAGE STYLES
+   ============================================================================ */
 
 .wiki-page-container {
   height: 100%;
@@ -1188,11 +1251,5 @@ onMounted(() => {
   gap: 12px;
   justify-content: flex-end;
   padding: 1rem 0;
-}
-
-.templates {
-  font-weight: 600;
-  color: #DAA520;
-  font-size: 0.9rem;
 }
 </style>
