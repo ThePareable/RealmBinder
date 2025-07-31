@@ -45,7 +45,7 @@
 
     <div class="game-content">
       <!-- Sidebar -->
-      <aside class="game-sidebar" @contextmenu.prevent="handleContextMenu">
+      <aside class="game-sidebar" @contextmenu.prevent="handleContextMenu($event, null)">
         <div class="sidebar-header">
           <h3>Wiki</h3>
           <v-btn @click="toggleAddMenu" size="small" variant="text">
@@ -70,7 +70,7 @@
         </div>
 
         <!-- Context Menu -->
-        <div v-if="showContextMenu" class="context-menu" :style="menuPosition">
+        <div v-if="showContextMenu" class="context-menu" :style="menuPosition" @click.stop>
           <div class="menu-item" @click="createNewPage">
             📄 Yeni Sayfa
           </div>
@@ -79,15 +79,8 @@
           </div>
         </div>
 
-        <!-- Inline Input for New Item -->
-        <div v-if="showInlineInput" class="inline-input">
-          <v-text-field v-model="newItemName" placeholder="İsim girin..." @keyup.enter="saveNewItem"
-            @keyup.esc="cancelNewItem" ref="inlineInputRef" density="compact" hide-details variant="outlined"
-            size="small" autofocus></v-text-field>
-        </div>
-
         <!-- Wiki Tree -->
-        <div class="wiki-tree">
+        <div class="wiki-tree" @contextmenu.prevent="handleContextMenu($event, null)">
           <div class="tree-item templates">
             <div class="tree-header" @click="toggleTemplates">
               <span>{{ templatesExpanded ? '▼' : '▶' }}</span>
@@ -100,11 +93,60 @@
             </div>
           </div>
 
-          <!-- Dynamic Wiki Pages -->
-          <div v-for="page in filteredWikiPages" :key="page.id" class="tree-item page-item"
-            :class="{ active: selectedPage?.id === page.id }" @click="selectPage(page)">
-            📄 <span>{{ page.title }}</span>
+          <!-- Dynamic Wiki Items with Drag & Drop -->
+          <div v-for="item in wikiTree" :key="item.id" class="tree-item" :class="{
+            'active': selectedPage?.id === item.id,
+            'dragging': draggedItem?.id === item.id,
+            'drag-over': dragOverItem?.id === item.id,
+            'folder-item': item.type === 'folder',
+            'page-item': item.type === 'page'
+          }" draggable="true" @dragstart="handleDragStart($event, item)" @dragover="handleDragOver($event, item)"
+            @dragenter="handleDragEnter($event, item)" @dragleave="handleDragLeave($event)"
+            @drop="handleDrop($event, item)" @click="item.type === 'page' ? selectPage(item) : toggleFolder(item)"
+            @contextmenu="handleContextMenu($event, item)" :style="{ paddingLeft: `${item.level * 20 + 12}px` }">
+            <div class="item-content">
+              <span class="item-icon">
+                {{ item.type === 'folder' ? '📁' : '📄' }}
+              </span>
+              <span class="item-title">{{ item.title }}</span>
+              <span v-if="item.type === 'folder'" class="folder-toggle">
+                {{ item.expanded ? '▼' : '▶' }}
+              </span>
+            </div>
+
+            <!-- Nested items -->
+            <div v-if="item.type === 'folder' && item.expanded" class="tree-children">
+              <div v-for="child in item.children" :key="child.id" class="tree-item" :class="{
+                'active': selectedPage?.id === child.id,
+                'dragging': draggedItem?.id === child.id,
+                'drag-over': dragOverItem?.id === child.id,
+                'folder-item': child.type === 'folder',
+                'page-item': child.type === 'page'
+              }" draggable="true" @dragstart="handleDragStart($event, child)" @dragover="handleDragOver($event, child)"
+                @dragenter="handleDragEnter($event, child)" @dragleave="handleDragLeave($event)"
+                @drop="handleDrop($event, child)"
+                @click="child.type === 'page' ? selectPage(child) : toggleFolder(child)"
+                @contextmenu="handleContextMenu($event, child)"
+                :style="{ paddingLeft: `${(child.level + 1) * 20 + 12}px` }">
+                <div class="item-content">
+                  <span class="item-icon">
+                    {{ child.type === 'folder' ? '📁' : '📄' }}
+                  </span>
+                  <span class="item-title">{{ child.title }}</span>
+                  <span v-if="child.type === 'folder'" class="folder-toggle">
+                    {{ child.expanded ? '▼' : '▶' }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- Inline Input for New Item -->
+        <div v-if="showInlineInput" class="inline-input">
+          <v-text-field v-model="newItemName" placeholder="İsim girin..." @keydown.enter="saveNewItem"
+            @keydown.esc="cancelNewItem" ref="inlineInputRef" density="compact" hide-details variant="outlined"
+            size="small" autofocus color="primary" @blur="saveNewItem"></v-text-field>
         </div>
 
         <!-- Search Input -->
@@ -183,7 +225,9 @@ const showContextMenu = ref(false)
 const showInlineInput = ref(false)
 const newItemName = ref('')
 const newItemType = ref('') // 'page' or 'folder'
+const newItemParentId = ref(null) // parent_id for new items
 const menuPosition = ref({ top: '0px', left: '0px' })
+const contextMenuTarget = ref(null) // Store the item that was right-clicked
 const templatesExpanded = ref(false)
 const filterText = ref('')
 const searchText = ref('')
@@ -192,18 +236,54 @@ const inlineInputRef = ref(null)
 // Dropdown state
 const showDropdown = ref(false)
 
-// Wiki pages
-const wikiPages = ref([])
+// Wiki pages and folders
+const wikiItems = ref([]) // Combined pages and folders
 const selectedPage = ref(null)
 const isEditing = ref(false)
 const editingContent = ref('')
 
-// Computed filtered pages
-const filteredWikiPages = computed(() => {
-  if (!filterText.value) return wikiPages.value
-  return wikiPages.value.filter(page =>
-    page.title.toLowerCase().includes(filterText.value.toLowerCase())
+// Drag & Drop state
+const draggedItem = ref(null)
+const dragOverItem = ref(null)
+const isDragging = ref(false)
+
+// Computed filtered items
+const filteredWikiItems = computed(() => {
+  if (!filterText.value) return wikiItems.value
+  return wikiItems.value.filter(item =>
+    item.title.toLowerCase().includes(filterText.value.toLowerCase())
   )
+})
+
+// Helper function to build tree structure
+const buildTreeStructure = (items) => {
+  const itemMap = new Map()
+  const roots = []
+
+  // Create map of all items
+  items.forEach(item => {
+    itemMap.set(item.id, { ...item, children: [] })
+  })
+
+  // Build tree structure
+  items.forEach(item => {
+    const node = itemMap.get(item.id)
+    if (item.parent_id) {
+      const parent = itemMap.get(item.parent_id)
+      if (parent) {
+        parent.children.push(node)
+      }
+    } else {
+      roots.push(node)
+    }
+  })
+
+  return roots
+}
+
+// Computed tree structure
+const wikiTree = computed(() => {
+  return buildTreeStructure(filteredWikiItems.value)
 })
 
 // Load game data
@@ -229,26 +309,43 @@ const loadGame = async () => {
     if (roleError) throw roleError
     isGM.value = userRole.role === 'gm'
 
-    // Load wiki pages
-    await loadWikiPages()
+    // Load wiki items
+    await loadWikiItems()
   } catch (error) {
     console.error('Oyun yüklenirken hata:', error)
   }
 }
 
-// Load wiki pages
-const loadWikiPages = async () => {
+// Load wiki items (pages and folders)
+const loadWikiItems = async () => {
   try {
-    const { data, error } = await supabase
+    // Load pages
+    const { data: pages, error: pagesError } = await supabase
       .from('wiki_pages')
       .select('*')
       .eq('game_id', route.params.id)
       .order('created_at', { ascending: true })
 
-    if (error) throw error
-    wikiPages.value = data || []
+    if (pagesError) throw pagesError
+
+    // Load folders
+    const { data: folders, error: foldersError } = await supabase
+      .from('wiki_folders')
+      .select('*')
+      .eq('game_id', route.params.id)
+      .order('created_at', { ascending: true })
+
+    if (foldersError) throw foldersError
+
+    // Combine pages and folders
+    const allItems = [
+      ...(pages || []).map(page => ({ ...page, type: 'page' })),
+      ...(folders || []).map(folder => ({ ...folder, type: 'folder' }))
+    ]
+
+    wikiItems.value = allItems
   } catch (error) {
-    console.error('Wiki sayfaları yüklenirken hata:', error)
+    console.error('Wiki öğeleri yüklenirken hata:', error)
   }
 }
 
@@ -261,19 +358,46 @@ const toggleAddMenu = () => {
 }
 
 // Show context menu
-const handleContextMenu = (event) => {
-  console.log('Context menu triggered, isGM:', isGM.value)
+const handleContextMenu = (event, targetItem) => {
+  console.log('Context menu triggered, isGM:', isGM.value, 'Target item:', targetItem)
   // Temporarily allow all users to use context menu for testing
 
   event.preventDefault()
   event.stopPropagation()
 
+  // Store the target item for context menu actions
+  contextMenuTarget.value = targetItem
+
+  // Calculate position relative to viewport
+  const rect = event.currentTarget.getBoundingClientRect()
+  const x = event.clientX
+  const y = event.clientY
+
+  // Ensure menu doesn't go off screen
+  const menuWidth = 180
+  const menuHeight = 100
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+
+  let left = x
+  let top = y
+
+  // Adjust if menu would go off right edge
+  if (x + menuWidth > windowWidth) {
+    left = x - menuWidth
+  }
+
+  // Adjust if menu would go off bottom edge
+  if (y + menuHeight > windowHeight) {
+    top = y - menuHeight
+  }
+
   menuPosition.value = {
-    top: event.clientY + 'px',
-    left: event.clientX + 'px'
+    top: top + 'px',
+    left: left + 'px'
   }
   showContextMenu.value = true
-  console.log('Context menu shown')
+  console.log('Context menu shown for:', targetItem, 'at position:', menuPosition.value)
 }
 
 // Close context menu when clicking outside
@@ -288,53 +412,113 @@ const closeAddMenu = () => {
 
 // Create new page
 const createNewPage = () => {
+  console.log('createNewPage called, contextMenuTarget:', contextMenuTarget.value)
+
   showAddMenu.value = false
   showContextMenu.value = false
   newItemType.value = 'page'
   showInlineInput.value = true
   newItemName.value = '' // Reset the input
+
+  // Set parent_id based on context menu target
+  if (contextMenuTarget.value && contextMenuTarget.value.type === 'folder') {
+    newItemParentId.value = contextMenuTarget.value.id
+  } else if (contextMenuTarget.value) {
+    newItemParentId.value = contextMenuTarget.value.parent_id
+  } else {
+    newItemParentId.value = null
+  }
+
+  console.log('Creating new page with parent_id:', newItemParentId.value)
+  console.log('showInlineInput set to:', showInlineInput.value)
+
   nextTick(() => {
+    console.log('nextTick executed, inlineInputRef:', inlineInputRef.value)
     if (inlineInputRef.value) {
       inlineInputRef.value.focus()
+      console.log('Focus set on input')
     }
   })
 }
 
 // Create new folder
 const createNewFolder = () => {
+  console.log('createNewFolder called, contextMenuTarget:', contextMenuTarget.value)
+
   showAddMenu.value = false
   showContextMenu.value = false
   newItemType.value = 'folder'
   showInlineInput.value = true
   newItemName.value = '' // Reset the input
+
+  // Set parent_id based on context menu target
+  if (contextMenuTarget.value && contextMenuTarget.value.type === 'folder') {
+    newItemParentId.value = contextMenuTarget.value.id
+  } else if (contextMenuTarget.value) {
+    newItemParentId.value = contextMenuTarget.value.parent_id
+  } else {
+    newItemParentId.value = null
+  }
+
+  console.log('Creating new folder with parent_id:', newItemParentId.value)
+  console.log('showInlineInput set to:', showInlineInput.value)
+
   nextTick(() => {
+    console.log('nextTick executed, inlineInputRef:', inlineInputRef.value)
     if (inlineInputRef.value) {
       inlineInputRef.value.focus()
+      console.log('Focus set on input')
     }
   })
 }
 
 // Save new item
 const saveNewItem = async () => {
-  if (!newItemName.value.trim()) return
+  console.log('saveNewItem called with:', {
+    name: newItemName.value,
+    type: newItemType.value,
+    parentId: newItemParentId.value
+  })
+
+  if (!newItemName.value || !newItemName.value.trim()) {
+    console.log('Empty name, cancelling...')
+    cancelNewItem()
+    return
+  }
 
   try {
     if (newItemType.value === 'page') {
+      console.log('Creating page with parent_id:', newItemParentId.value)
       const { data, error } = await supabase
         .from('wiki_pages')
         .insert({
           game_id: route.params.id,
-          title: newItemName.value,
+          title: newItemName.value.trim(),
           content: '',
-          parent_id: null
+          parent_id: newItemParentId.value
         })
         .select()
         .single()
 
       if (error) throw error
-      wikiPages.value.push(data)
+      console.log('Page created successfully:', data)
+      wikiItems.value.push({ ...data, type: 'page' })
+    } else if (newItemType.value === 'folder') {
+      console.log('Creating folder with parent_id:', newItemParentId.value)
+      const { data, error } = await supabase
+        .from('wiki_folders')
+        .insert({
+          game_id: route.params.id,
+          title: newItemName.value.trim(),
+          parent_id: newItemParentId.value
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      console.log('Folder created successfully:', data)
+      wikiItems.value.push({ ...data, type: 'folder' })
     }
-    // TODO: Implement folder creation when needed
   } catch (error) {
     console.error('Yeni öğe oluşturulurken hata:', error)
   } finally {
@@ -344,9 +528,12 @@ const saveNewItem = async () => {
 
 // Cancel new item creation
 const cancelNewItem = () => {
+  console.log('Cancelling new item creation')
   showInlineInput.value = false
   newItemName.value = ''
   newItemType.value = ''
+  newItemParentId.value = null
+  contextMenuTarget.value = null
 }
 
 // Select page
@@ -394,6 +581,104 @@ const toggleTemplates = () => {
   templatesExpanded.value = !templatesExpanded.value
 }
 
+// Drag & Drop functions
+const handleDragStart = (event, item) => {
+  draggedItem.value = item
+  isDragging.value = true
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', item.id)
+}
+
+const handleDragOver = (event, item) => {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+  dragOverItem.value = item
+}
+
+const handleDragEnter = (event, item) => {
+  event.preventDefault()
+  dragOverItem.value = item
+}
+
+const handleDragLeave = (event) => {
+  dragOverItem.value = null
+}
+
+const handleDrop = async (event, targetItem) => {
+  event.preventDefault()
+
+  if (!draggedItem.value || !targetItem || draggedItem.value.id === targetItem.id) {
+    return
+  }
+
+  // Prevent dropping into itself or its own children
+  if (isDescendant(draggedItem.value, targetItem)) {
+    return
+  }
+
+  try {
+    const newParentId = targetItem.type === 'folder' ? targetItem.id : targetItem.parent_id
+
+    if (draggedItem.value.type === 'page') {
+      const { error } = await supabase
+        .from('wiki_pages')
+        .update({ parent_id: newParentId })
+        .eq('id', draggedItem.value.id)
+
+      if (error) throw error
+    } else if (draggedItem.value.type === 'folder') {
+      const { error } = await supabase
+        .from('wiki_folders')
+        .update({ parent_id: newParentId })
+        .eq('id', draggedItem.value.id)
+
+      if (error) throw error
+    }
+
+    // Update local state
+    const itemIndex = wikiItems.value.findIndex(item => item.id === draggedItem.value.id)
+    if (itemIndex !== -1) {
+      wikiItems.value[itemIndex].parent_id = newParentId
+    }
+
+  } catch (error) {
+    console.error('Öğe taşınırken hata:', error)
+  } finally {
+    draggedItem.value = null
+    dragOverItem.value = null
+    isDragging.value = false
+  }
+}
+
+// Helper function to check if an item is a descendant of another
+const isDescendant = (potentialChild, potentialParent) => {
+  if (!potentialChild || !potentialParent) return false
+  if (potentialChild.id === potentialParent.id) return true
+
+  const parent = wikiItems.value.find(item => item.id === potentialChild.parent_id)
+  if (!parent) return false
+
+  return isDescendant(parent, potentialParent)
+}
+
+// Toggle folder expansion
+const toggleFolder = (folder) => {
+  if (folder.type === 'folder') {
+    folder.expanded = !folder.expanded
+  }
+}
+
+// Recursive component to render tree items
+const renderTreeItem = (item, level = 0) => {
+  const children = wikiItems.value.filter(child => child.parent_id === item.id)
+
+  return {
+    item,
+    level,
+    children: children.map(child => renderTreeItem(child, level + 1))
+  }
+}
+
 // Dropdown functions
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
@@ -429,8 +714,13 @@ onMounted(() => {
       showDropdown.value = false
     }
 
+    // Close context menu if clicking outside
+    const contextMenu = document.querySelector('.context-menu')
+    if (contextMenu && !contextMenu.contains(event.target)) {
+      closeContextMenu()
+    }
+
     closeAddMenu()
-    closeContextMenu()
   })
 })
 </script>
@@ -454,6 +744,8 @@ onMounted(() => {
   align-items: center;
   border-bottom: 1px solid rgba(218, 165, 32, 0.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 99998;
 }
 
 .header-left {
@@ -513,7 +805,7 @@ onMounted(() => {
 /* Dropdown Styles */
 .dropdown-container {
   position: relative;
-  z-index: 10001;
+  z-index: 99999;
 }
 
 .dropdown-toggle {
@@ -570,7 +862,7 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   min-width: 200px;
-  z-index: 10000;
+  z-index: 99999;
   margin-top: 8px;
   overflow: hidden;
   padding: 8px 0;
@@ -670,13 +962,14 @@ onMounted(() => {
 }
 
 .tree-item {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 6px;
   transition: all 0.3s ease;
   border: 1px solid transparent;
   font-size: 0.9rem;
+  user-select: none;
 }
 
 .tree-item:hover {
@@ -689,6 +982,53 @@ onMounted(() => {
   background: rgba(218, 165, 32, 0.12);
   border-color: rgba(218, 165, 32, 0.3);
   box-shadow: 0 1px 4px rgba(218, 165, 32, 0.15);
+}
+
+.tree-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.tree-item.drag-over {
+  background: rgba(218, 165, 32, 0.15);
+  border-color: rgba(218, 165, 32, 0.4);
+  box-shadow: 0 0 0 2px rgba(218, 165, 32, 0.3);
+}
+
+.folder-item {
+  font-weight: 600;
+  color: #DAA520;
+}
+
+.page-item {
+  color: #B0BEC5;
+  font-weight: 400;
+}
+
+.item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.item-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-toggle {
+  font-size: 0.8rem;
+  color: #DAA520;
+  margin-left: auto;
 }
 
 .tree-header {
@@ -738,9 +1078,10 @@ onMounted(() => {
   border: 2px solid rgba(218, 165, 32, 0.3);
   border-radius: 12px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
-  z-index: 9999;
+  z-index: 99999;
   min-width: 180px;
   padding: 8px 0;
+  pointer-events: auto;
 }
 
 .menu-item {
@@ -763,9 +1104,10 @@ onMounted(() => {
 }
 
 .inline-input {
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid rgba(218, 165, 32, 0.1);
   background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(218, 165, 32, 0.1);
 }
 
 .game-main {
